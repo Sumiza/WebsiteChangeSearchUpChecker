@@ -69,7 +69,7 @@ class Parsedb(object):
     def websitestatus(self) -> None:
         self.getwebsite()
         if 400 >= self.statuscode >= 200:
-            self.message = f"Is ONLINE after {self.trycount} cycles({waitsleep*self.trycount}sec)"
+            self.message = f"Is ONLINE after {self.trycount} cycles"
             self.trycount = 0
         else:
             self.trycount += 1
@@ -117,18 +117,21 @@ class Parsedb(object):
             elif self.checktype == 'online':
                 self.websitestatus()
 
-def checkall(waitsleep:int = 60):
+def checkall(waitsleep:int = 60,threading:bool = False):
     threads = []
     starttime = time()
     for i in db.execute("SELECT DISTINCT checktype from webcheck").fetchall():
         for j in db.execute(f"SELECT * FROM webcheck WHERE checktype = '{i[0]}'").fetchall():
-            check = Parsedb(j)
-            # check.typeselect()
-            t = Thread(target=check.typeselect)
-            threads.append(t)
-            t.start()
-    for i in threads:
-        i.join()
+            if threading:
+                check = Parsedb(j)
+                t = Thread(target=check.typeselect)
+                threads.append(t)
+                t.start()
+            else:
+                check.typeselect()
+    if threading:
+        for i in threads:
+            i.join()
     db.commit() 
     db.close()
     sleeptimer(starttime,waitsleep)
@@ -144,5 +147,4 @@ if __name__ == '__main__':
     while True:
         db = sqlite3.connect("onchecker.db",check_same_thread=False)
         db.execute("PRAGMA journal_mode = 'WAL'")
-        waitsleep = 60
-        checkall(waitsleep)
+        checkall()
