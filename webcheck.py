@@ -122,8 +122,8 @@ def checkall(waitsleep:int = 60,threading:bool = False):
     starttime = time()
     for i in db.execute("SELECT DISTINCT checktype from webcheck").fetchall():
         for j in db.execute(f"SELECT * FROM webcheck WHERE checktype = '{i[0]}'").fetchall():
+            check = Parsedb(j)
             if threading:
-                check = Parsedb(j)
                 t = Thread(target=check.typeselect)
                 threads.append(t)
                 t.start()
