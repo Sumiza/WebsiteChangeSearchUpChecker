@@ -1,0 +1,12 @@
+{
+  "smtp2go": {
+    "authkey" : "api-authkey"
+  },
+  "mailjet": {
+    "authuser" : "apiuser",
+    "authpass" : "apikey"
+  },
+  "discord": {
+    "authkey" : "9456848644866846/apikey"
+  }
+}
