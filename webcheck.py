@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from threading import Thread
 from difflib import ndiff
 from apisender import send
+import socket
 import sqlite3
 
 
@@ -41,6 +42,35 @@ class Parsedb(object):
                 self.statuscode = r.status_code
         except:
             self.statuscode = 404
+
+    def getport(self) -> None:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as so:
+                so.settimeout(5)
+                target = self.target.split(":")
+                res = so.connect_ex((socket.gethostbyname(target[0]), int(target[1])))
+                if res == 0:
+                    self.new = "Port Open"
+                else:
+                    self.new = "Port Closed"
+        except:
+            self.new = "Error"
+
+    def checkport(self):
+        self.getport()
+        if self.new != self.last:
+            self.message = f"Port is OPEN after {self.trycount} cycles"
+            self.trycount = 0
+        else:
+            self.trycount += 1
+            self.message = "Port is Closed"
+        if self.new != self.last or self.trycount == self.trytrigger:
+                self.sendmess()
+        elif self.trycount == 0:
+            return
+        db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 0 WHERE target = ? AND checktype = 'port'",
+                        (self.new,self.trycount,int(time()),self.target))
+
 
     def websitetextcheck(self) -> None:
         self.getwebsite()
@@ -86,15 +116,18 @@ class Parsedb(object):
         """
         if self.checktype == 'word':
             self.mess = f"Website: {self.target}\n{self.title}\n{self.keyword} {self.message}\n"+"="*80
-            fromid = "Website Word Finder"
+            subject = "Website Word Finder"
         elif self.checktype == 'change':
             self.mess = f"Website: {self.target}\n{self.title}\n{self.message}\n"+"="*80
-            fromid = "Website Changed"
+            subject = "Website Changed"
         elif self.checktype == 'online':
             self.mess = f"Website: {self.target}\n{self.message}\nStatus Code:{self.statuscode}\n"+"="*80
-            fromid = "Website Online Checker"
-        send(bodytext=self.mess,fromid=fromid,sendby="discord")
-        print(self.mess,fromid)
+            subject = "Website Online Checker"
+        elif self.checktype == 'port':
+            self.mess = f"Port: {self.target}\n{self.message}\n"+"="*80
+            subject = "Port Checker"
+        send(bodytext=self.mess,subject=subject,sendby="discord")
+        print(self.mess,subject)
 
     def runornot(self) -> bool:
         if self.count >= self.trigger:
@@ -110,12 +143,12 @@ class Parsedb(object):
         if self.runornot():
             if self.checktype == 'word':
                 self.websitetextcheck()
-                pass
             elif self.checktype == 'change':
                 self.websitechange()
-                pass
             elif self.checktype == 'online':
                 self.websitestatus()
+            elif self.checktype == 'port':
+                self.checkport()
 
 def checkall(waitsleep:int = 60,threading:bool = False):
     threads = []
@@ -135,7 +168,7 @@ def checkall(waitsleep:int = 60,threading:bool = False):
     db.commit() 
     db.close()
     sleeptimer(starttime,waitsleep)
-    print(time()-starttime)
+    # print(time()-starttime)
 
 def sleeptimer(starttime:float,stimer:float):
     stimer = starttime-time()+stimer
