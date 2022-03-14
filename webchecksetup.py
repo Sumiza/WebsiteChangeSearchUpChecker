@@ -28,11 +28,16 @@ while select != 0:
         print('For website text Checker write domain!keyword!checkskip! ex: https://www.google.com/!words here!1!')
         print('For website change checker write domain!checkskip ex: https://www.google.com/!0')
         print('For website uptime checker write domain!trytimes!checkskip ex: https://www.google.com/!5!0')
-        p = input('0 to exit\n')
+        print('For port checking write the fqdn or IP fqdn:port!trytimes!checkskip')
+        p = input('0 to exit\n:')
         if p != str(0) and p != "":
             p = p.split("!")
             print(p)
-            if len(p) == 4:
+            if ":" in p[0]:
+                print("Adding to Port checker")
+                db.execute("INSERT OR IGNORE INTO webcheck (target,trytrigger,trigger,checktype) VALUES(?, ?, ?, ?)",
+                (p[0],p[1],p[2],"port"))
+            elif len(p) == 4:
                 print("adding to word search")
                 db.execute("INSERT OR IGNORE INTO webcheck (target,keyword,trigger,checktype) VALUES(?, ?, ?,?)",
                 (p[0],p[1],p[2],"word"))
@@ -56,6 +61,9 @@ while select != 0:
             print(*i)
         print("\n---Uptime Checker---")
         for i in db.execute("SELECT target,trytrigger,trigger FROM webcheck WHERE checktype = 'online'").fetchall():
+            print(*i)
+        print("\n---Port Checker---")
+        for i in db.execute("SELECT target,trytrigger,trigger FROM webcheck WHERE checktype = 'port'").fetchall():
             print(*i)
         select = -1
 
