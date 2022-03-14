@@ -8,5 +8,9 @@
   },
   "discord": {
     "authkey" : "9456848644866846/apikey"
+  },
+  "default" : {
+    "fromid" : "fromemail@example.com",
+    "toid" : "myemail@example.com"
   }
 }
