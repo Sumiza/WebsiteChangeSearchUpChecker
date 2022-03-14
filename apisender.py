@@ -3,7 +3,7 @@ import requests
 
 def smtp2go(**kwargs) -> str:
   header = {'Content-type': 'application/json'}
-  authkey = getpass("smtp2go")
+  authkey = readfile("smtp2go")
   data = {
   "api_key": authkey,
   "sender": kwargs['fromid'],
@@ -14,15 +14,14 @@ def smtp2go(**kwargs) -> str:
   return requests.post("https://api.smtp2go.com/v3/email/send",json.dumps(data),headers=header)
 
 def discord(**kwargs) -> str:
-  authkey = getpass("discord")
+  authkey = readfile("discord")
   webheader = {"Content-Type": "application/json; charset=utf-8"}
-  data= {"content":f"{kwargs['bodytext']}","username": f"{kwargs['fromid']}"}
+  data= {"content":f"{kwargs['bodytext']}","username": f"{kwargs['subject']}"}
   return requests.post("https://discord.com/api/webhooks/"+authkey+"?wait=true",headers=webheader,data=json.dumps(data))
 
 def mailjet(**kwargs) -> str:
-
   header = {'Content-type': 'application/json'}
-  auth = getpass("mailjet")
+  auth = readfile("mailjet")
   data = {
   'Messages': [{
           "From": {
@@ -39,13 +38,17 @@ def mailjet(**kwargs) -> str:
           }]}
   return requests.post("https://api.mailje5t.com/v3.1/send",json.dumps(data),headers=header,auth=auth)
 
-def getpass(name):
+def readfile(name):
   with open("apisender.json") as api:
     api = json.loads("".join(api.readlines()))
     if name == "discord" or name == "smtp2go":
       return api[name]["authkey"]
     elif name == "mailjet":
       return api[name]["authuser"],api[name]["authpass"]
+    elif name == "fromid":
+      return api["default"]["fromid"]
+    elif name == "toid":
+      return api["default"]["toid"]
 
 def send(fromid:str="",toid:str="",subject:str="",fromname:str="",toname:str="",bodytext:str="",bodyhtml:str="",sendby:str=""):
   """
@@ -58,6 +61,11 @@ def send(fromid:str="",toid:str="",subject:str="",fromname:str="",toname:str="",
   bodytext: Message email/sms/discord
   bodyhtml: Message email/discord?
   """
+  if fromid == "":
+    fromid = readfile("fromid")
+  if toid == "":
+    toid = readfile("toid")
+
   try:
     return sendbywho(fromid=fromid,
                       toid=toid,
@@ -69,8 +77,7 @@ def send(fromid:str="",toid:str="",subject:str="",fromname:str="",toname:str="",
                       sendby=sendby)
   except:
     return "Failed to send"
-
-
+    
 def sendbywho(**kwargs):
   if kwargs['sendby'] == "discord":
     a = discord(**kwargs)
