@@ -26,7 +26,7 @@ class Parsedb(object):
         self.new = ""
 
     def getwebsite(self) -> None:
-        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36'}
         try:
             if self.checktype == "word" or self.checktype == "change":
                 r = get(self.target,headers=headers,timeout=5)
@@ -48,8 +48,8 @@ class Parsedb(object):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as so:
                 so.settimeout(5)
                 target = self.target.split(":")
-                res = so.connect_ex((socket.gethostbyname(target[0]), int(target[1])))
-                if res == 0:
+                self.statuscode = so.connect_ex((socket.gethostbyname(target[0]), int(target[1])))
+                if self.statuscode == 0:
                     self.new = "Port Open"
                 else:
                     self.new = "Port Closed"
@@ -58,18 +58,20 @@ class Parsedb(object):
 
     def checkport(self):
         self.getport()
-        if self.new != self.last:
-            self.message = f"Port is OPEN after {self.trycount} cycles"
+        if self.statuscode == 0:
+            self.message = f"Port is OPEN after {int(time())-int(self.checked)} seconds"
             self.trycount = 0
         else:
-            self.trycount += 1
             self.message = "Port is Closed"
-        if self.new != self.last or self.trycount == self.trytrigger:
+            self.trycount += 1
+
+        if self.new != self.last:
+            if self.trycount == self.trytrigger or self.trycount == 0:
                 self.sendmess()
-        elif self.trycount == 0:
+        elif self.trycount == 0 or self.trycount > self.trytrigger:
             return
-        db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 0 WHERE target = ? AND checktype = 'port'",
-                        (self.new,self.trycount,int(time()),self.target))
+        db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'port'",
+                    (self.new,self.trycount,int(time()),self.target))
 
 
     def websitetextcheck(self) -> None:
@@ -80,7 +82,7 @@ class Parsedb(object):
                 self.message = "- Found"
             if self.message != self.last:
                 self.sendmess()
-            db.execute("UPDATE webcheck SET last = ?, checked = ?, count = 0 WHERE target = ? AND checktype = 'word'",
+            db.execute("UPDATE webcheck SET last = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'word'",
                         (self.message,int(time()),self.target))
 
     def websitechange(self) -> None:
@@ -93,23 +95,26 @@ class Parsedb(object):
                 if self.checked == 0:
                     self.message = "Website Added"
                 self.sendmess()
-            db.execute("UPDATE webcheck SET last = ?, checked = ?, count = 0 WHERE target = ? AND checktype = 'change'",
-                    (self.new,int(time()),self.target))
+            db.execute("UPDATE webcheck SET last = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'change'",
+                        (self.new,int(time()),self.target))
     
     def websitestatus(self) -> None:
         self.getwebsite()
         if 400 >= self.statuscode >= 200:
-            self.message = f"Is ONLINE after {self.trycount} cycles"
+            self.message = f"Is ONLINE after {int(time())-int(self.checked)} seconds"
             self.trycount = 0
         else:
             self.trycount += 1
             self.message = "Is OFFLINE"
-        if str(self.statuscode) != self.last or self.trycount == self.trytrigger:
+
+        if str(self.statuscode) != self.last:
+            if self.trycount == self.trytrigger or self.trycount == 0:
                 self.sendmess()
-        elif self.trycount == 0:
+        elif self.trycount == 0 or self.trycount > self.trytrigger:
             return
-        db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 0 WHERE target = ? AND checktype = 'online'",
-                        (self.statuscode,self.trycount,int(time()),self.target))
+        db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'online'",
+                    (self.statuscode,self.trycount,int(time()),self.target))
+
     def sendmess(self):
         """
             Connect whatever API to send messages
@@ -127,7 +132,7 @@ class Parsedb(object):
             self.mess = f"Port: {self.target}\n{self.message}\n"+"="*80
             subject = "Port Checker"
         send(bodytext=self.mess,subject=subject,sendby="discord")
-        print(self.mess,subject)
+        print(subject,"\n",self.mess)
 
     def runornot(self) -> bool:
         if self.count >= self.trigger:
@@ -136,7 +141,7 @@ class Parsedb(object):
         else:
             # print("returning false for ",self.target,self.count,self.trigger)
             db.execute("UPDATE webcheck SET count = ? WHERE target = ? AND checktype = ?",
-            (self.count+1,self.target,self.checktype))
+                        (self.count+1,self.target,self.checktype))
             return False
 
     def typeselect(self) -> None:
@@ -150,22 +155,38 @@ class Parsedb(object):
             elif self.checktype == 'port':
                 self.checkport()
 
+def amionlinedns(hostlist:list = ["1.1.1.1","8.8.8.8","9.9.9.9"]):
+    """
+    Returns True if can connect to any of the dns server in hostlist.
+    Returns False if cant connect.
+    Args:
+        hostlist:list default is cloudflare, google, quad9
+    """
+    for host in hostlist:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as so:
+            so.settimeout(5)
+            response = so.connect_ex((host,53))
+            if response == 0:
+                return True
+    return False
+
 def checkall(waitsleep:int = 60,threading:bool = False):
     threads = []
     starttime = time()
-    for i in db.execute("SELECT DISTINCT checktype from webcheck").fetchall():
-        for j in db.execute(f"SELECT * FROM webcheck WHERE checktype = '{i[0]}'").fetchall():
-            check = Parsedb(j)
-            if threading:
-                t = Thread(target=check.typeselect)
-                threads.append(t)
-                t.start()
-            else:
-                check.typeselect()
-    if threading:
-        for i in threads:
-            i.join()
-    db.commit() 
+    if amionlinedns():
+        for i in db.execute("SELECT DISTINCT checktype from webcheck").fetchall():
+            for j in db.execute(f"SELECT * FROM webcheck WHERE checktype = '{i[0]}'").fetchall():
+                check = Parsedb(j)
+                if threading:
+                    t = Thread(target=check.typeselect)
+                    threads.append(t)
+                    t.start()
+                else:
+                    check.typeselect()
+        if threading:
+            for i in threads:
+                i.join()
+        db.commit() 
     db.close()
     sleeptimer(starttime,waitsleep)
     # print(time()-starttime)
@@ -174,7 +195,6 @@ def sleeptimer(starttime:float,stimer:float):
     stimer = starttime-time()+stimer
     if stimer > 0:
         sleep(stimer)
-
 
 if __name__ == '__main__':
     while True:
