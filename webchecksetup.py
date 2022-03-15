@@ -6,8 +6,8 @@ db.execute("""CREATE TABLE IF NOT EXISTS webcheck
             (target TEXT,
             checktype TEXT,
             checked INTEGER DEFAULT 0,
-            count INTEGER DEFAULT 0,
-            trigger INTEGER DEFAULT 0,
+            count INTEGER DEFAULT 1,
+            trigger INTEGER DEFAULT 1,
             last TEXT DEFAULT 0,
             keyword TEXT,
             trycount INTEGER DEFAULT 0,
@@ -25,15 +25,15 @@ while select != 0:
         select = int(input("Please select an option: "))
 
     if select == 1:
-        print('For website text Checker write domain!keyword!checkskip! ex: https://www.google.com/!words here!1!')
-        print('For website change checker write domain!checkskip ex: https://www.google.com/!0')
-        print('For website uptime checker write domain!trytimes!checkskip ex: https://www.google.com/!5!0')
-        print('For port checking write the fqdn or IP fqdn:port!trytimes!checkskip')
+        print('For website text Checker write domain!keyword!checkevery! ex: https://www.google.com/!words here!1!')
+        print('For website change checker write domain!checkevery ex: https://www.google.com/!2')
+        print('For website uptime checker write domain!trytimes!checkevery ex: https://www.google.com/!5!1')
+        print('For port checking write the fqdn or IP fqdn:port!trytimes!checkevery ex: google.com:21!3!2')
         p = input('0 to exit\n:')
         if p != str(0) and p != "":
             p = p.split("!")
             print(p)
-            if ":" in p[0]:
+            if ":" in p[0] and "://" not in p[0]:
                 print("Adding to Port checker")
                 db.execute("INSERT OR IGNORE INTO webcheck (target,trytrigger,trigger,checktype) VALUES(?, ?, ?, ?)",
                 (p[0],p[1],p[2],"port"))
