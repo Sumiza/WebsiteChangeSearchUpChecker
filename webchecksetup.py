@@ -13,9 +13,20 @@ db.execute("""CREATE TABLE IF NOT EXISTS webcheck
             trycount INTEGER DEFAULT 0,
             trytrigger INTEGER DEFAULT 0)
             """)
-
+def addinfo():
+    print("Adding to database")
+    db.execute("INSERT OR IGNORE INTO webcheck (target,checktype,trigger,keyword,trytrigger) VALUES(?, ?, ?, ?, ?)",
+                (p["target"],p["checktype"],p["trigger"],p["keyword"],p["trytrigger"]))
+    db.commit()
 select = -1
 while select != 0:
+    p = {
+        "target" : "",
+        "checktype" : "",
+        "trigger" : 1,
+        "keyword" : "",
+        "trytrigger" : 1
+    }
     if select == -1:
         print("\n1. Add new website")
         print("2. List websites")
@@ -25,31 +36,42 @@ while select != 0:
         select = int(input("Please select an option: "))
 
     if select == 1:
-        print('For website text Checker write domain!keyword!checkevery! ex: https://www.google.com/!words here!1!')
-        print('For website change checker write domain!checkevery ex: https://www.google.com/!2')
-        print('For website uptime checker write domain!trytimes!checkevery ex: https://www.google.com/!5!1')
-        print('For port checking write the fqdn or IP fqdn:port!trytimes!checkevery ex: google.com:21!3!2')
-        p = input('0 to exit\n:')
-        if p != str(0) and p != "":
-            p = p.split("!")
-            print(p)
-            if ":" in p[0] and "://" not in p[0]:
-                print("Adding to Port checker")
-                db.execute("INSERT OR IGNORE INTO webcheck (target,trytrigger,trigger,checktype) VALUES(?, ?, ?, ?)",
-                (p[0],p[1],p[2],"port"))
-            elif len(p) == 4:
-                print("adding to word search")
-                db.execute("INSERT OR IGNORE INTO webcheck (target,keyword,trigger,checktype) VALUES(?, ?, ?,?)",
-                (p[0],p[1],p[2],"word"))
-            elif len(p) == 2:
-                print("adding to web change")
-                db.execute("INSERT OR IGNORE INTO webcheck (target,trigger,checktype) VALUES(?, ?, ?)",
-                (p[0],p[1],"change"))
-            elif len(p) == 3:
-                print("addding to online checker")
-                db.execute("INSERT OR IGNORE INTO webcheck (target,trytrigger,trigger,checktype) VALUES(?, ?, ?, ?)",
-                (p[0],p[1],p[2],"online"))
-            db.commit()
+        print("\n1. Website Text Checker")
+        print("2. Website Change Checker")
+        print("3. Website Online Checker")
+        print("4. Open Port Checker")
+        print("0. Exit")
+        select = int(input("Please select an option: "))
+        if select == 1:
+            print("\n"+"="*10+"Website Text Checker"+"="*10)
+            p["checktype"] = "word"
+            p["target"] = input("Target Domain, protocol(http or https required) ex: https://www.google.com/\n")
+            p["keyword"] = input("Keyword, word or words to look for (case sensitive) ex: Words to look for\n")
+            p["trigger"] = input("Check every runs, 1 is default at 60sec, ex: 1\n")
+            yn = input(f"Check {p['target']} look for {p['keyword']} every {p['trigger']} Y/N" ).casefold()
+
+        elif select == 2:
+            p["checktype"] = "change"
+            p["target"] = input("Target Domain, protocol(http or https required) ex: https://www.google.com/\n")
+            p["trigger"] = input("Check every runs, 1 is default at 60sec, ex: 1\n")
+            yn = input(f"Check {p['target']} every {p['trigger']} Y/N" ).casefold()
+        
+        elif select == 3:
+            p["checktype"] = "online"
+            p["target"] = input("Target Domain, protocol(http or https required) ex: https://www.google.com/\n")
+            p["trigger"] = input("Check every runs, 1 is default at 60sec, ex: 1\n")
+            p["trytrigger"] = input("Notify after how many tries come back as offline, ex: 1\n")
+            yn = input(f"Check {p['target']} every {p['trigger']}, Notify after {p['trytrigger']} Y/N" ).casefold()
+
+        elif select == 4:
+            p["checktype"] = "port"
+            p["target"] = input("Target IP or FQDN with port number ex: google.com:80 or 8.8.8.8:53\n")
+            p["trigger"] = input("Check every runs, 1 is default at 60sec, ex: 1\n")
+            p["trytrigger"] = input("Notify after how many tries come back as offline, ex: 1\n")
+            yn = input(f"Check {p['target']} every {p['trigger']}, Notify after {p['trytrigger']} Y/N" ).casefold()
+
+        if yn == "y":
+            addinfo()
         select = -1
 
     elif select == 2:
@@ -69,7 +91,7 @@ while select != 0:
 
     elif select == 3:
         print("Select what domain to delete")
-        print("word = Text Checker | change = Change Website | online = Uptime Checker")
+        print("word = Text Checker | change = Change Website | online = Uptime Checker | port = Port Checker")
         print("ex: online https://www.google.com")
         p = input('0 to exit\n')
         if p:
