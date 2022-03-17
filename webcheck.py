@@ -58,6 +58,7 @@ class Parsedb(object):
 
     def checkport(self):
         self.getport()
+        lasttrycount = self.trycount
         if self.statuscode == 0:
             self.message = "Port is OPEN"
             self.trycount = 0
@@ -66,13 +67,17 @@ class Parsedb(object):
             self.trycount += 1
         if self.checked != 0:
             self.message = self.message+f" after {sectotext(int(time())-int(self.checked))}"
-        if self.new != self.last:
-            if self.trycount == self.trytrigger or self.trycount == 0:
-                self.sendmess()
-        elif self.trycount == 0 or self.trycount > self.trytrigger:
-            return
-        db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'port'",
-                    (self.new,self.trycount,int(time()),self.target))
+        if self.trycount <= self.trytrigger:
+            if self.new != self.last:
+                if self.trycount == self.trytrigger or self.trycount == 0:
+                    self.sendmess()
+                else:
+                    self.new = self.last
+            if lasttrycount != self.trycount:  
+                print("writing to port")
+                print(self.new,self.trycount,int(time()),self.target)
+                db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'port'",
+                            (self.new,self.trycount,int(time()),self.target))
 
 
     def websitetextcheck(self) -> None:
@@ -102,6 +107,7 @@ class Parsedb(object):
     
     def websitestatus(self) -> None:
         self.getwebsite()
+        lasttrycount = self.trycount
         if 400 >= self.statuscode >= 200:
             self.message = "Is ONLINE"
             self.trycount = 0
@@ -110,13 +116,31 @@ class Parsedb(object):
             self.message = "Is OFFLINE"
         if self.checked != 0:
             self.message = self.message+f" after {sectotext(int(time())-int(self.checked))}"
-        if str(self.statuscode) != self.last:
-            if self.trycount == self.trytrigger or self.trycount == 0:
-                self.sendmess()
-        elif self.trycount == 0 or self.trycount > self.trytrigger:
-            return
-        db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'online'",
-                    (self.statuscode,self.trycount,int(time()),self.target))
+
+        if self.trycount <= self.trytrigger:
+            if str(self.statuscode) != self.last:
+                if self.trycount == self.trytrigger or self.trycount == 0:
+                    self.sendmess()
+                else:
+                    self.statuscode = self.last
+            if lasttrycount != self.trycount:    
+                print("writing to status")
+                print(self.statuscode,self.trycount,int(time()),self.target)
+                db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'online'",
+                            (self.statuscode,self.trycount,int(time()),self.target))
+
+        # if str(self.statuscode) != self.last:
+        #     if self.trycount == self.trytrigger or self.trycount == 0:
+        #         self.sendmess()  
+        #     elif self.trycount < self.trytrigger:
+        #         self.statuscode = self.last
+
+        #     if self.trycount == 0 or self.trycount <= self.trytrigger:
+        #         print("writing to status")
+        #         print(self.statuscode,self.trycount,int(time()),self.target)
+        #         db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'online'",
+        #                     (self.statuscode,self.trycount,int(time()),self.target))
+    
 
     def sendmess(self):
         """
@@ -252,7 +276,7 @@ def checkall(waitsleep:int = 60,threading:bool = False):
         db.commit() 
     db.close()
     sleeptimer(starttime,waitsleep)
-    # print(time()-starttime)
+#     print(time()-starttime)
 
 def sleeptimer(starttime:float,stimer:float):
     stimer = starttime-time()+stimer
