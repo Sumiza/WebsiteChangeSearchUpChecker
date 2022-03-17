@@ -129,19 +129,6 @@ class Parsedb(object):
                 db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'online'",
                             (self.statuscode,self.trycount,int(time()),self.target))
 
-        # if str(self.statuscode) != self.last:
-        #     if self.trycount == self.trytrigger or self.trycount == 0:
-        #         self.sendmess()  
-        #     elif self.trycount < self.trytrigger:
-        #         self.statuscode = self.last
-
-        #     if self.trycount == 0 or self.trycount <= self.trytrigger:
-        #         print("writing to status")
-        #         print(self.statuscode,self.trycount,int(time()),self.target)
-        #         db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'online'",
-        #                     (self.statuscode,self.trycount,int(time()),self.target))
-    
-
     def sendmess(self):
         """
             Connect whatever API to send messages
