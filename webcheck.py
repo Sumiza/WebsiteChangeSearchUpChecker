@@ -71,13 +71,14 @@ class Parsedb(object):
             if self.new != self.last:
                 if self.trycount == self.trytrigger or self.trycount == 0:
                     self.sendmess()
+                    self.checked = int(time())
                 else:
                     self.new = self.last
             if lasttrycount != self.trycount:  
                 print("writing to port")
                 print(self.new,self.trycount,int(time()),self.target)
                 db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'port'",
-                            (self.new,self.trycount,int(time()),self.target))
+                            (self.new,self.trycount,self.checked,self.target))
 
 
     def websitetextcheck(self) -> None:
@@ -121,13 +122,14 @@ class Parsedb(object):
             if str(self.statuscode) != self.last:
                 if self.trycount == self.trytrigger or self.trycount == 0:
                     self.sendmess()
+                    self.checked = int(time())
                 else:
                     self.statuscode = self.last
             if lasttrycount != self.trycount:    
                 print("writing to status")
                 print(self.statuscode,self.trycount,int(time()),self.target)
                 db.execute("UPDATE webcheck SET last = ?, trycount = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'online'",
-                            (self.statuscode,self.trycount,int(time()),self.target))
+                            (self.statuscode,self.trycount,self.checked,self.target))
 
     def sendmess(self):
         """
@@ -263,7 +265,7 @@ def checkall(waitsleep:int = 60,threading:bool = False):
         db.commit() 
     db.close()
     sleeptimer(starttime,waitsleep)
-#     print(time()-starttime)
+    print(time()-starttime)
 
 def sleeptimer(starttime:float,stimer:float):
     stimer = starttime-time()+stimer
