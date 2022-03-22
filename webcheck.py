@@ -90,8 +90,8 @@ class Parsedb(object):
             if self.message != self.last:
                 self.message = self.message+f"\n\n {sectotext(int(time())-int(self.checked))} Since last change"
                 self.sendmess()
-            db.execute("UPDATE webcheck SET last = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'word'",
-                        (self.message,int(time()),self.target))
+                db.execute("UPDATE webcheck SET last = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'word'",
+                            (self.message,int(time()),self.target))
 
     def websitechange(self) -> None:
         self.getwebsite()
@@ -103,8 +103,8 @@ class Parsedb(object):
                 if self.checked == 0:
                     self.message = "Website Added"
                 self.sendmess()
-            db.execute("UPDATE webcheck SET last = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'change'",
-                        (self.new,int(time()),self.target))
+                db.execute("UPDATE webcheck SET last = ?, checked = ?, count = 1 WHERE target = ? AND checktype = 'change'",
+                            (self.new,int(time()),self.target))
     
     def websitestatus(self) -> None:
         self.getwebsite()
